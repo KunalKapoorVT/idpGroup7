@@ -5,8 +5,8 @@ const int motorLBackward = 10;
 const int motorRForward = 6;
 const int motorRBackward = 5;
 
-BT_PIN_RXD = 7;
-BT_PIN_TXD = 8;
+const int BT_PIN_RXD = 7;
+const int BT_PIN_TXD = 8;
 
 int lowCount = 0;
 int highCount = 0;
@@ -32,10 +32,14 @@ void loop() {
   if(bluetooth.available()){
     String btString = bluetooth.readString();
     if(btString == "Go"){
+      Serial.print("Going");
       moving = true;
+      bluetooth.print("Go Recieved");
     }
     if(btString == "Stop"){
+      Serial.print("Stopped");
       moving = false;
+      bluetooth.print("Stop Recieved");
     }
   }
   
@@ -62,20 +66,20 @@ void driveForward(){
 
     //TODO: get gyro data in order to keep straight here
 
-    byte motorLSpeed = 250; // 0-255
-    byte motorRSpeed = 250; // 0-255
+    int motorLSpeed = 250; // 0-255
+    int motorRSpeed = 250; // 0-255
 
-    driveTractor(motorLSPeed, motorRSpeed);
+    driveTractor(motorLSpeed, motorRSpeed);
 
 }
 
-void driveTractor(byte LSpeed, byte RSpeed){
+void driveTractor(int LSpeed, int RSpeed){
   
     //convert wheel speed into forward and backward signal
-    motorLForwardSpeed = (LSpeed > 0)? LSpeed : 0;
-    motorRForwardSpeed = (RSpeed > 0)? RSpeed : 0;
-    motorLBackwardSpeed = (LSpeed < 0)? -LSpeed : 0;
-    motorRBackwardSpeed = (RSpeed < 0)? -RSpeed : 0;
+    byte motorLForwardSpeed = (LSpeed > 0)? LSpeed : 0;
+    byte motorRForwardSpeed = (RSpeed > 0)? RSpeed : 0;
+    byte motorLBackwardSpeed = (LSpeed < 0)? -LSpeed : 0;
+    byte motorRBackwardSpeed = (RSpeed < 0)? -RSpeed : 0;
     
     //set the wheels' speeds
     analogWrite(motorLForward,motorLForwardSpeed);
@@ -92,7 +96,7 @@ void onButtonStateLow(){
   
 }
 
-void updateButton(buttonVal){
+void updateButton(bool buttonVal){
   if (buttonVal){
     highCount++;
     lowCount = 0;
