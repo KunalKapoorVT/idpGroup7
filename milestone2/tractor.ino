@@ -11,8 +11,7 @@ const int BT_PIN_TXD = 8;
 int lowCount = 0;
 int highCount = 0;
 
-bool buttonState = true;
-bool buttonControl = false;
+enum {MOVE, STOP} STATE = MOVE;
 
 SoftwareSerial bluetooth (BT_PIN_RXD, BT_PIN_TXD);
 
@@ -25,20 +24,18 @@ void setup() {
   bluetooth.begin(9600);
 }
 
-bool moving;
-
 void loop() {
   
   if(bluetooth.available()){
     String btString = bluetooth.readString();
     if(btString == "Go"){
       Serial.print("Going");
-      moving = true;
+      STATE = MOVE;
       bluetooth.print("Go Recieved");
     }
-    if(btString == "Stop"){
+    else if(btString == "Stop"){
       Serial.print("Stopped");
-      moving = false;
+      STATE = STOP;
       bluetooth.print("Stop Recieved");
     }
   }
@@ -46,12 +43,15 @@ void loop() {
   bool buttonVal = analogRead(A5) > 750;
   updateButton(buttonVal);
 
-  
-  if (moving && buttonControl){
-    driveForward();
-  }
-  else{
-    stopTractor();
+  switch (STATE)
+  {
+    case MOVE:
+      driveForward();
+      break;
+    case ESTOP:
+      stopTractor();
+      break;
+    default: break;
   }
 }
 
@@ -88,29 +88,19 @@ void driveTractor(int LSpeed, int RSpeed){
     analogWrite(motorRBackward,motorRBackwardSpeed);
 }
 
-void onButtonStateHigh(){
-  buttonControl = !buttonControl;
-}
-
-void onButtonStateLow(){
-  
-}
-
 void updateButton(bool buttonVal){
   if (buttonVal){
     highCount++;
     lowCount = 0;
-    if(highCount > 5 && !buttonState){
-      buttonState = true;
-      onButtonStateHigh();
+    if(highCount > 5 && STATE == STOP){
+      STATE = MOVE;
     }
   }
   if (!buttonVal){
     lowCount++;
     highCount = 0;
-    if(lowCount > 5 && buttonState){
-      buttonState = false;
-      onButtonStateLow();
+    if(lowCount > 5 && STATE == MOVE){
+      STATE = STOP;
     }
   }
 }
