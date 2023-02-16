@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <MPU6050_light.h>
 
+const double pi = 3.14159265358979323846264;
 
 const int motorLForward = 11;
 const int motorLBackward = 10;
@@ -14,6 +15,13 @@ const int BT_PIN_RXD = 7;
 const int BT_PIN_TXD = 8;
 
 unsigned long gyroTimer = 0;
+double posX = 0.0;
+double posY = 0.0;
+double velX = 0.0;
+double velY = 0.0;
+double gyroTotalAccX;
+double gyroTotalAccY;
+unsigned long gyroPrintTimer = 0;
 
 int lowCount = 0;
 int highCount = 0;
@@ -50,6 +58,8 @@ bool moving;
 void loop() {
 
   gyroscope.update();
+
+  updateGyroPos();
 
   gyroTest();
   
@@ -97,24 +107,40 @@ void driveForward(){
 
 }
 
+void updateGyroPos(){
+  int dt = millis() - gyroTimer;
+  double Zangle = gyroscope.getAngleZ();
+  velX += gyroscope.getAccX() * sin(Zangle*2*pi/360) * dt;
+  velY += gyroscope.getAccY() * cos(Zangle*2*pi/360) * dt;
+  posX += velX * dt;
+  posY += velY * dt;
+  gyroTimer = millis(); 
+}
+
 void gyroTest(){
   
-    if(millis() - gyroTimer > 5000){ 
+    if(millis() - gyroPrintTimer > 5000){ 
+
       
-      Serial.print(F("ACCELERO  X: "));Serial.print(gyroscope.getAccX());
-      Serial.print("\tY: ");Serial.print(gyroscope.getAccY());
-      Serial.print("\tZ: ");Serial.println(gyroscope.getAccZ());
-    
-      Serial.print(F("GYRO      X: "));Serial.print(gyroscope.getGyroX());
-      Serial.print("\tY: ");Serial.print(gyroscope.getGyroY());
-      Serial.print("\tZ: ");Serial.println(gyroscope.getGyroZ());
+      Serial.print(F("Displacement     X: "));
+      Serial.print(posX);
+      Serial.print("\tY: ");
+      Serial.println(posY);
+      
+      Serial.print(F("ACC     X: "));
+      Serial.print(gyroscope.getAccX());
+      Serial.print("\tY: ");
+      Serial.println(gyroscope.getAccY());
+      
       
       Serial.print(F("ANGLE     X: "));
       Serial.print(gyroscope.getAngleX());
-      Serial.print("\tY: ");Serial.print(gyroscope.getAngleY());
-      Serial.print("\tZ: ");Serial.println(gyroscope.getAngleZ());
+      Serial.print("\tY: ");
+      Serial.print(gyroscope.getAngleY());
+      Serial.print("\tZ: ");
+      Serial.println(gyroscope.getAngleZ());
   
-      gyroTimer = millis(); 
+      gyroPrintTimer = millis(); 
     }
 }
 
