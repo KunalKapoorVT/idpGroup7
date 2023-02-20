@@ -24,6 +24,7 @@ double gyroTotalAccY;
 unsigned long gyroPrintTimer = 0;
 
 double lineAngleDeg = 0;
+double lineX = 0;
 
 int lowCount = 0;
 int highCount = 0;
@@ -105,7 +106,7 @@ void driveForward(bool considerHorizontal){
     if(considerHorizontal){
      
       //the distance from the track, xDist, how far the tractor is to the right of its straight line
-      double xDist = tractorX - pathNearX;
+      double xDist = tractorX - lineX;
   
       //minAngleDeg: the ideal angle to hold, from relative to the angle of the line
       //when the tractor is on the right, this is a positive (ccw) angle
@@ -162,12 +163,17 @@ void gyroTest(){
     if(millis() - gyroPrintTimer > 5000){ 
 
       
-      Serial.print(F("Displacement     X: "));
-      Serial.print(posX);
-      Serial.print("\tY: ");
-      Serial.println(posY);
+      Serial.print(F("Displacement     X(cm): "));
+      Serial.print(posX/(9.8*10000));
+      Serial.print("\tY(cm): ");
+      Serial.println(posY/(9.8*10000));
       
-      Serial.print(F("ACC     X: "));
+      Serial.print(F("Velocity     X(cm/s): "));
+      Serial.print(velX/0.98);
+      Serial.print("\tY(cm/s): ");
+      Serial.println(velY/0.98);
+      
+      Serial.print(F("Aceleration     X: "));
       Serial.print(gyroscope.getAccX());
       Serial.print("\tY: ");
       Serial.println(gyroscope.getAccY());
