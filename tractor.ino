@@ -23,6 +23,8 @@ double gyroTotalAccX;
 double gyroTotalAccY;
 unsigned long gyroPrintTimer = 0;
 
+double lineAngleDeg = 0;
+
 int lowCount = 0;
 int highCount = 0;
 
@@ -96,12 +98,50 @@ void stopTractor(){
     digitalWrite(motorRBackward,LOW);
 }
 
-void driveForward(){
+void driveForward(bool considerHorizontal){
 
-    //TODO: process gyro data in order to keep straight here
+    double idealAngleDeg;
 
-    int motorLSpeed = 0; // 0-255
-    int motorRSpeed = 0; // 0-255
+    if(considerHorizontal){
+     
+      //the distance from the track, xDist, how far the tractor is to the right of its straight line
+      double xDist = tractorX - pathNearX;
+  
+      //minAngleDeg: the ideal angle to hold, from relative to the angle of the line
+      //when the tractor is on the right, this is a positive (ccw) angle
+      //when it is on the left, xDist is negative, so the angle is clockwise
+      idealAngleDeg = xDist/minAngleFactor + lineAngleDeg;
+
+    }
+    else{
+      idealAngleDeg = lineAngleDeg;
+    }
+    
+    //the furthest you should go, relative to the line, is perpendicular
+    int maxAngleDeg = 90 + lineAngleDeg;
+    int minAngleDeg = -90 + lineAngleDeg;
+  
+    //bound the ideal angle between the max and min
+    idealAngleDeg = max(min(idealAngledeg,maxAngleDeg),minAngleDeg);
+
+    //take the ideal angle and the current angle and create relative motor speeds
+    double angleDiff = tractorAngle - idealAngleDeg;
+
+    
+    int motorLSpeed = 0; // -256 to 255
+    int motorRSpeed = 0; // -256 to 255
+
+    //at angleDiff>=90: L = 255, R = -255
+    //at angleDiff=0: L = 255, R = 255
+    //at angleDiff<=-90: L = -255, R = 255
+    
+    
+    motorRSpeed = 255*(1-angleDiff/45);
+    motorRSpeed = max(min(motorRSpeed,255),-255);
+
+    
+    motorLSpeed = 255*(1+angleDiff/45);
+    motorLSpeed = max(min(motorLSpeed,255),-255);
 
     driveTractor(motorLSpeed, motorRSpeed);
 
