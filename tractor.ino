@@ -4,6 +4,8 @@
 
 const double pi = 3.14159265358979323846264;
 
+const double minAngleFactor = 10000;
+
 const int motorLForward = 11;
 const int motorLBackward = 10;
 const int motorRForward = 6;
@@ -25,6 +27,8 @@ unsigned long gyroPrintTimer = 0;
 
 double lineAngleDeg = 0;
 double lineX = 0;
+double tractorAngle = 0;
+double tractorX = 0;
 
 int lowCount = 0;
 int highCount = 0;
@@ -85,7 +89,7 @@ void loop() {
 
   
   if (moving && buttonControl){
-    driveForward();
+    driveForward(false);
   }
   else{
     stopTractor();
@@ -123,7 +127,7 @@ void driveForward(bool considerHorizontal){
     int minAngleDeg = -90 + lineAngleDeg;
   
     //bound the ideal angle between the max and min
-    idealAngleDeg = max(min(idealAngledeg,maxAngleDeg),minAngleDeg);
+    idealAngleDeg = max(min(idealAngleDeg,maxAngleDeg),minAngleDeg);
 
     //take the ideal angle and the current angle and create relative motor speeds
     double angleDiff = tractorAngle - idealAngleDeg;
@@ -151,6 +155,7 @@ void driveForward(bool considerHorizontal){
 void updateGyroPos(){
   int dt = millis() - gyroTimer;
   double Zangle = gyroscope.getAngleZ();
+  tractorAngle = Zangle;
   velX += gyroscope.getAccX() * sin(Zangle*2*pi/360) * dt;
   velY += gyroscope.getAccY() * cos(Zangle*2*pi/360) * dt;
   posX += velX * dt;
