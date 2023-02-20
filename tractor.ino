@@ -34,7 +34,7 @@ int lowCount = 0;
 int highCount = 0;
 
 bool buttonState = true;
-bool buttonControl = false;
+bool buttonControl = true;
 
 SoftwareSerial bluetooth (BT_PIN_RXD, BT_PIN_TXD);
 
@@ -73,12 +73,12 @@ void loop() {
   if(bluetooth.available()){
     String btString = bluetooth.readString();
     if(btString == "Go"){
-      Serial.print("Going");
+      Serial.println("Going");
       moving = true;
       bluetooth.print("Go Recieved");
     }
     if(btString == "Stop"){
-      Serial.print("Stopped");
+      Serial.println("Stopped");
       moving = false;
       bluetooth.print("Stop Recieved");
     }
@@ -147,6 +147,9 @@ void driveForward(bool considerHorizontal){
     
     motorLSpeed = 255*(1+angleDiff/45);
     motorLSpeed = max(min(motorLSpeed,255),-255);
+
+//    Serial.print("Motor L Speed: ");Serial.println(motorLSpeed);
+//    Serial.print("Motor R Speed: ");Serial.println(motorRSpeed);
 
     driveTractor(motorLSpeed, motorRSpeed);
 
