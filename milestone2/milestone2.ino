@@ -164,8 +164,8 @@ void updateGyroPos(){
   int dt = millis() - gyroTimer;
   double Zangle = gyroscope.getAngleZ();
   tractorAngle = Zangle;
-  velX += gyroscope.getAccX() * sin(Zangle*2*pi/360) * dt;
-  velY += gyroscope.getAccY() * cos(Zangle*2*pi/360) * dt;
+  velX += (gyroscope.getAccX() * cos(Zangle*2*pi/360) + gyroscope.getAccY() * sin(Zangle*2*pi/360)) * dt;
+  velY += (gyroscope.getAccY() * cos(Zangle*2*pi/360) - gyroscope.getAccX() * sin(Zangle*2*pi/360)) * dt;
   posX += velX * dt;
   posY += velY * dt;
   gyroTimer = millis(); 
