@@ -81,6 +81,7 @@ void loop() {
       bluetooth.print("Stop Recieved");
     }
     if(btString == "Recalibrate"){
+      bluetooth.println(("Recalibrating"));
       bluetooth.println(F("Calculating offsets, do not move MPU6050"));
       delay(100);
       gyroscope.calcOffsets(true,true); // gyro and accelero
@@ -219,11 +220,12 @@ void driveTractor(int LSpeed, int RSpeed){
 }
 
 void onButtonStateHigh(){
-  bluetooth.print("Button up");
+  bluetooth.println("Button up");
   buttonControl = !buttonControl;
   moving = buttonControl;
   if (buttonControl)
   {
+    bluetooth.println(("Restarting"));
     bluetooth.println(F("Calculating offsets, do not move MPU6050"));
     delay(100);
     gyroscope.calcOffsets(true,true); // gyro and accelero
@@ -232,7 +234,7 @@ void onButtonStateHigh(){
 }
 
 void onButtonStateLow(){
-    bluetooth.print("Button down");
+    bluetooth.println("Button down");
 
 }
 
