@@ -36,6 +36,8 @@ int highCount = 0;
 bool buttonState = false;
 bool buttonControl = true;
 
+bool moving = false;
+
 SoftwareSerial bluetooth (BT_PIN_RXD, BT_PIN_TXD);
 
 MPU6050 gyroscope(Wire);
@@ -60,8 +62,6 @@ void setup() {
   bluetooth.println("Done!\n");
 }
 
-bool moving = false;
-
 void loop() {
 
   gyroscope.update();
@@ -80,19 +80,25 @@ void loop() {
       moving = false;
       bluetooth.print("Stop Recieved");
     }
-    if(btString == "Recalibrate"){
+    /*if(btString == "Recalibrate"){
       bluetooth.println(("Recalibrating"));
       bluetooth.println(F("Calculating offsets, do not move MPU6050"));
       delay(100);
       gyroscope.calcOffsets(true,true); // gyro and accelero
       bluetooth.println("Done!\n");
+    }*/
+    if(btString == "moving")
+    {
+      bluetooth.println("moving is ");
+      bluetooth.print(moving);
     }
   }
   
-  bool buttonVal = analogRead(buttonIn) > 750;
+  bool buttonVal = analogRead(buttonIn) > 512;
+  //bluetooth.println(analogRead(buttonIn));
   updateButton(buttonVal);
 
-  
+  //bluetooth.println(moving);
   if (moving){
     driveForward(false);
   }
@@ -223,19 +229,19 @@ void onButtonStateHigh(){
   bluetooth.println("Button up");
   buttonControl = !buttonControl;
   moving = buttonControl;
-  if (buttonControl)
+  /*if (buttonControl)
   {
-    bluetooth.println(("Restarting"));
+    //bluetooth.println(("Restarting"));
     bluetooth.println(F("Calculating offsets, do not move MPU6050"));
     delay(100);
     gyroscope.calcOffsets(true,true); // gyro and accelero
     bluetooth.println("Done!\n");
-  }
+  }*/
 }
 
 void onButtonStateLow(){
     bluetooth.println("Button down");
-
+    moving = buttonControl;
 }
 
 void updateButton(bool buttonVal){
@@ -257,10 +263,10 @@ void updateButton(bool buttonVal){
   }
 }
 
-void gyroCal()
+/*void gyroCal()
 {
   bluetooth.println(F("Calculating offsets, do not move MPU6050"));
   delay(100);
   gyroscope.calcOffsets(true,true); // gyro and accelero
   bluetooth.println("Done!\n");
-}
+}*/
