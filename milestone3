@@ -16,6 +16,10 @@ const int buttonIn = A3;
 const int BT_PIN_RXD = 7;
 const int BT_PIN_TXD = 8;
 
+const int IR_PIN = A0;
+int val = 0;
+int limit = 800;
+
 unsigned long gyroTimer = 0;
 double posX = 0.0;
 double posY = 0.0;
@@ -48,8 +52,8 @@ void setup() {
   pinMode(motorRForward, OUTPUT);
   pinMode(motorRBackward, OUTPUT);
 
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
+  //pinMode(trigPin, OUTPUT);
+  //pinMode(echoPin, INPUT);
   
 //  Serial.begin(9600);
   Wire.begin();
@@ -71,7 +75,9 @@ void loop() {
 
   updateGyroPos();
 
-  //gyroTest();
+  gyroTest();
+
+  IRtest();
   
   if(bluetooth.available()){
     String btString = bluetooth.readString();
@@ -185,7 +191,7 @@ void gyroTest(){
     if(millis() - gyroPrintTimer > 5000){ 
 
       
-      Serial.print(F("Displacement     X(cm): "));
+      /*Serial.print(F("Displacement     X(cm): "));
       Serial.print(posX/(9.8*10000));
       Serial.print("\tY(cm): ");
       Serial.println(posY/(9.8*10000));
@@ -199,15 +205,15 @@ void gyroTest(){
       Serial.print(gyroscope.getAccX());
       Serial.print("\tY: ");
       Serial.println(gyroscope.getAccY());
+      */
       
-      
-      Serial.print(F("ANGLE     X: "));
-      Serial.print(gyroscope.getAngleX());
-      Serial.print("\tY: ");
-      Serial.print(gyroscope.getAngleY());
-      Serial.print("\tZ: ");
-      Serial.println(gyroscope.getAngleZ());
-      Serial.println();
+      bluetooth.print(F("ANGLE     X: "));
+      bluetooth.print(gyroscope.getAngleX());
+      bluetooth.print("\tY: ");
+      bluetooth.print(gyroscope.getAngleY());
+      bluetooth.print("\tZ: ");
+      bluetooth.println(gyroscope.getAngleZ());
+      bluetooth.println();
   
       gyroPrintTimer = millis(); 
     }
@@ -273,3 +279,19 @@ void updateButton(bool buttonVal){
   gyroscope.calcOffsets(true,true); // gyro and accelero
   bluetooth.println("Done!\n");
 }*/
+
+void IRtest()
+{
+  val=analogRead(IR_PIN);  //photodiode reading
+  Serial.println(val);      
+  if(val <= limit)             // NO OBSTICLE 
+  {  
+   //bluetooth.println("Read Floor");
+   delay(50);  
+  }  
+  else if(val > limit)        // OBSTICLE DETECTED  
+  {  
+   //bluetooth.println("Read Tape");
+   delay(50);  
+  }  
+}
