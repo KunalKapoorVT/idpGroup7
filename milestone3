@@ -46,7 +46,7 @@ int highCount = 0;
 
 //states
 bool buttonState = false;
-bool buttonControl = true;
+bool buttonControl = false;
 bool moving = false;
 String turn = "Forward";
 
