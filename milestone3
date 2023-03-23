@@ -4,22 +4,28 @@
 
 const double pi = 3.14159265358979323846264;
 
+//Used for gyro
 const double minAngleFactor = 10000;
 
+//motor pins
 const int motorLForward = 11;
 const int motorLBackward = 10;
 const int motorRForward = 5;
 const int motorRBackward = 6;
 
+//push button
 const int buttonIn = A3;
 
+//Bluetooth
 const int BT_PIN_RXD = 7;
 const int BT_PIN_TXD = 8;
 
+//IR photodiode
 const int IR_PIN = A0;
 int val = 0;
 int limit = 800;
 
+//gyro
 unsigned long gyroTimer = 0;
 double posX = 0.0;
 double posY = 0.0;
@@ -34,13 +40,15 @@ double lineX = 0;
 double tractorAngle = 0;
 double tractorX = 0;
 
+//push button
 int lowCount = 0;
 int highCount = 0;
 
+//states
 bool buttonState = false;
 bool buttonControl = true;
-
 bool moving = false;
+String turn = "Forward";
 
 SoftwareSerial bluetooth (BT_PIN_RXD, BT_PIN_TXD);
 
@@ -77,7 +85,7 @@ void loop() {
 
   gyroTest();
 
-  IRtest();
+  //IRtest();
   
   if(bluetooth.available()){
     String btString = bluetooth.readString();
@@ -85,7 +93,7 @@ void loop() {
       moving = true;
       bluetooth.print("Go Recieved");
     }
-    if(btString == "Stop"){
+    else if(btString == "Stop"){
       moving = false;
       bluetooth.print("Stop Recieved");
     }
@@ -96,10 +104,22 @@ void loop() {
       gyroscope.calcOffsets(true,true); // gyro and accelero
       bluetooth.println("Done!\n");
     }*/
-    if(btString == "moving")
+    else if(btString == "Moving")
     {
       bluetooth.println("moving is ");
       bluetooth.print(moving);
+    }
+    else if(btString == "Right")
+    {
+      lineAngleDeg -= 90;
+      bluetooth.println("R");
+      bluetooth.println(lineAngleDeg);
+    }
+    else if (btString == "Left")
+    {
+      lineAngleDeg += 90;
+      bluetooth.println("L");
+      bluetooth.println(lineAngleDeg);
     }
   }
   
@@ -125,7 +145,7 @@ void stopTractor(){
 
 void driveForward(bool considerHorizontal){
 
-    double idealAngleDeg;
+    double idealAngleDeg = lineAngleDeg;
 
     if(considerHorizontal){
      
@@ -137,9 +157,6 @@ void driveForward(bool considerHorizontal){
       //when it is on the left, xDist is negative, so the angle is clockwise
       idealAngleDeg = xDist/minAngleFactor + lineAngleDeg;
 
-    }
-    else{
-      idealAngleDeg = lineAngleDeg;
     }
     
     //the furthest you should go, relative to the line, is perpendicular
