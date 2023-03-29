@@ -303,7 +303,8 @@ void updateButton(bool buttonVal){
 void IRtest()
 {
   val=analogRead(IR_PIN);  //photodiode reading
-  Serial.println(val);      
+  bluetooth.print("IR:");
+  bluetooth.println(val);      
   if(val <= limit)             // NO OBSTICLE 
   {  
    //bluetooth.println("Read Floor");
@@ -311,7 +312,7 @@ void IRtest()
   }  
   else if(val > limit)        // OBSTICLE DETECTED  
   {  
-   //bluetooth.println("Read Tape");
+   bluetooth.println("Read Tape");
    delay(20); 
    turnState(); 
   }  
@@ -339,8 +340,12 @@ String turnState()
 
 void ultraEStop()
 {
-  if (digitalRead(3) < 400)
+  if (digitalRead(3) == 0)
   {
     moving = false;
+  }
+  else if (buttonControl)
+  {
+    moving = true;
   }
 }
