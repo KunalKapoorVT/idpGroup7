@@ -85,6 +85,8 @@ void loop() {
   updateGyroPos();
 
   gyroTest();
+  
+  ultraEStop();
 
   //IRtest();
   
@@ -333,4 +335,12 @@ String turnState()
     bluetooth.println("L");
   }
   counter++;
+}
+
+void ultraEStop()
+{
+  if (digitalRead(3) > 400)
+  {
+    moving = false;
+  }
 }
