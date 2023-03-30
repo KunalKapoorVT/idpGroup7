@@ -54,6 +54,8 @@ bool moving = false;
 String turn = "Forward";
 int counter = 0;
 
+bool obstacle = false;
+
 SoftwareSerial bluetooth(BT_PIN_RXD, BT_PIN_TXD);
 
 MPU6050 gyroscope(Wire);
@@ -92,7 +94,6 @@ void loop() {
   ultraEStop();
 
   IRtest();
-  lastUpdateMS = millis();
 
   if (turning)
     turnTimer();
@@ -312,7 +313,8 @@ void IRtest() {
     bluetooth.println("Read Tape");
     //delay(20);
     //makeNextTurn();
-    turnDelay = 250;
+    turnDelay = 200;
+    lastUpdateMS = millis();
     turning = true;
   }
 }
@@ -334,8 +336,13 @@ void makeNextTurn() {
 void ultraEStop() {
   if (digitalRead(3) == 0) {
     moving = false;
-  } else {
+    obstacle = true;
+    bluetooth.println("Obstacle Detected");
+  }
+  else if (obstacle)
+  {
     moving = true;
+    obstacle = false;
   }
 }
 
