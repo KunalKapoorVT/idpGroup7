@@ -23,7 +23,8 @@ const int BT_PIN_TXD = 8;
 //IR photodiode
 const int IR_PIN = A0;
 int val = 0;
-int limit = 800;
+int limit = 1010;
+bool turning = false;
 
 //gyro
 unsigned long gyroTimer = 0;
@@ -88,7 +89,7 @@ void loop() {
   
   ultraEStop();
 
-  //IRtest();
+  IRtest();
   
   if(bluetooth.available()){
     String btString = bluetooth.readString();
@@ -309,13 +310,15 @@ void IRtest()
   {  
    //bluetooth.println("Read Floor");
    delay(20);
+   turning = false;
   }  
-  else if(val > limit)        // OBSTICLE DETECTED  
+  else if(val > limit && !turning)        // OBSTICLE DETECTED  
   {  
    bluetooth.println("Read Tape");
-   delay(20); 
-   turnState(); 
-  }  
+   delay(20);
+   turnState();
+   turning = true;
+  }
 }
 
 String turnState()
