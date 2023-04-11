@@ -313,7 +313,15 @@ void IRtest() {
     bluetooth.println("Read Tape");
     //delay(20);
     //makeNextTurn();
+    //turnDelay = 200 for left 300 for right
+    if (counter <= 1) {
     turnDelay = 200;
+  } else if (counter <= 3) {
+    turnDelay = 300;
+  } else if (counter <= 5) {
+    turnDelay = 200;
+  }
+
     lastUpdateMS = millis();
     turning = true;
   }
@@ -334,10 +342,12 @@ void makeNextTurn() {
 }
 
 void ultraEStop() {
-  if (digitalRead(3) == 0) {
-    moving = false;
-    obstacle = true;
-    bluetooth.println("Obstacle Detected");
+  if (digitalRead(3) == 0)  {
+    if(moving){
+      moving = false;
+      obstacle = true;
+      bluetooth.println("Obstacle Detected");
+    }
   }
   else if (obstacle)
   {
