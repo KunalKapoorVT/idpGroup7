@@ -1,78 +1,134 @@
 from bleak import BleakClient, BleakScanner
 import asyncio
-import sys
-
+import time
 
 async def scan():
-    devices = await BleakScanner.discover()
-    return devices
-
+                devices = await BleakScanner.discover()
+                return devices
 
 async def connEst(tractorCli):
+    
     conn = await tractorCli.connect()
     return conn
 
-
 class Tractor():
-    def __init__(self):
-        self.PosX = 0
-        self.Posy = 0
-        self.AngleZ = 0
-        self.VelX = 0
-        self.velY = 0
+        def __init__(self):
+                self.PosX = 0
+                self.PosY = 0
+                self.AngleZ = 0
+                self.VelX = 0
+                self.velY = 0
+                
+                self.prevPosX = 0
+                self.prevPosY = 0
 
-        self.prevPosX = 0
-        self.prevPosY = 0
+                self.moving = False
+                self.obstacle = False
 
-        self.moving = False
+                self.lastCheckpointX = 0
+                self.lastCheckpointY = 0
 
-        self.lastCheckpointX = 0
-        self.lastCheckpointY = 0
+                self.idealAngleZ = 0
 
-        self.idealAngleZ = 0
+                self.tapes = []
+                self.obstacles = []
+                
+                #permanent mac address of the tractor
+                self.mac_addr = "94:A9:A8:3A:4D:8B"
+                self.gatt_char = "0000FFE1-0000-1000-8000-00805f9b34fb"
 
-        # permanent mac address of the tractor
-        self.mac_addr = "94:A9:A8:3A:4D:8B"
-        self.gatt_char = "0000FFE1-0000-1000-8000-00805f9b34fb"
+                self.bluetoothClient = None
+                self.startTIme = time.time()
 
-        self.bluetoothClient = None
+                self.recvLog = ''
 
-    def send(self, msg):
-        print(msg)
+        def time(self):
 
-        x = self.bluetoothClient.write_gatt_char(self.gatt_char, msg)
-        asyncio.run(x)
+                return time.time()-self.startTime
 
-    def receiveNotify(self, sender, data: bytearray):
-        sender = self.gatt_char
-        print(f"{sender}: {data}")
+        async def quit(self):
 
-    ##
-    ##        def receive(self):
-    ##
-    ##                receiver = self.bluetoothClient.read_gatt_char(self.gatt_char)
-    ##                data = asyncio.run(receiver)
-    ##                print(data)
+                await self.bluetoothClient.stop_notify(self.gatt_char)
 
-    def connect(self):
-        self.bluetoothClient = BleakClient(self.mac_addr)
+                await self.bluetoothClient.disconnect()
 
-        asyncio.run(connEst(self.bluetoothClient))
+        async def send(self, msg):
 
-    def setRecv(self):
-        BleakClient(self.mac_addr).bluetoothClient.start_notify('0000ffe1-0000-1000-8000-00805f9b34fb', self.receiveNotify)
+                print(msg)
 
-        #x = self.bluetoothClient.start_notify('00002a05-0000-1000-8000-00805f9b34fb', self.receiveNotify)
-        #asyncio.run(x)
+                await self.bluetoothClient.write_gatt_char(self.gatt_char, msg)
 
-    ##                x = self.bluetoothClient.start_notify('00002a04-0000-1000-8000-00805f9b34fb', self.receiveNotify)
-    ##                asyncio.run(x)
-    ##
-    ##                x = self.bluetoothClient.start_notify('00002902-0000-1000-8000-00805f9b34fb', self.receiveNotify)
-    ##                asyncio.run(x)
-    ##
-    ##                x = self.bluetoothClient.start_notify('00002901-0000-1000-8000-00805f9b34fb', self.receiveNotify)
-    ##                asyncio.run(x)
+        def handleMsg(self,msg):
+            
+            print(msg)
 
-    def disconnect(self):
-        asyncio.run(self.bluetoothClient.disconnect())
+            if msg == "Go Recieved":
+                self.moving = True
+            if msg == "Stop Recieved":
+                self.moving = False
+            if msg == "Obstacle":
+                self.moving = False
+                self.obstacle = True
+                self.obstacles.append((self.time(), self.PosX, self.PosY))
+            if msg == "Obstacle Cleared":
+                self.moving = True
+                self.obstacle = False
+                prevObs = self.obstacles
+                self.obstacles[-1] = (prevObs[0],prevObs[1],prevObs[2],self.time())
+            if msg == "Read Tape":
+                self.tapes.append((self.time(), self.PosX, self.PosY))
+
+            if msg.startswith("GOALANGLE="):
+                self.idealAngleZ = float(msg[len("GoALANGLE="):])
+                
+            if msg.startswith("ANGLEZ="):
+                self.AngleZ = float(msg[len("ANGLEZ="):])
+
+            if msg.startswith("PosX="):
+                self.prevPosX = self.PosX
+                self.PosX = float(msg[len("PosX="):])
+                
+                
+            if msg.startswith("PosY="):
+                self.prevPosY = self.PosY
+                self.PosY = float(msg[len("PosY="):])
+
+                
+            if msg.startswith("VelX="):
+                self.VelX = float(msg[len("VelX="):])
+
+                
+            if msg.startswith("VelY="):
+                self.VelY = float(msg[len("VelY="):])
+
+        def processRecvLog(self):
+
+                if '\r\n' in self.recvLog:
+                    msg = self.recvLog[:self.recvLog.index('\r\n')]
+                    self.recvLog = self.recvLog[self.recvLog.index('\r\n')+2:]
+                    self.handleMsg(msg)
+
+                
+        def receiveNotify(self, handle, data):
+            
+                print(data)
+                
+                self.recvLog += data.decode()
+                
+                self.processRecvLog();
+
+
+        async def connect(self):
+            
+                self.bluetoothClient = BleakClient(self.mac_addr);
+                
+                await self.bluetoothClient.connect()
+
+        async def setRecv(self):
+
+              await self.bluetoothClient.start_notify(self.gatt_char, self.receiveNotify)
+                
+
+        async def disconnect(self):
+
+                await self.bluetoothClient.disconnect()
