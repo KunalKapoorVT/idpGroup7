@@ -36,7 +36,7 @@ double velX = 0.0;
 double velY = 0.0;
 double gyroTotalAccX;
 double gyroTotalAccY;
-unsigned long gyroPrintTimer = 0;
+unsigned long sendDataTimer = 0;
 
 double lineAngleDeg = 0;
 double lineX = 0;
@@ -89,13 +89,11 @@ void loop() {
 
   updateGyroPos();
 
-  gyroTest();
+  sendLocationData();
 
   ultraEStop();
 
   IRtest();
-
-  bluetoothReadingTest();
 
   if (turning)
     turnTimer();
@@ -104,21 +102,10 @@ void loop() {
     String btString = bluetooth.readString();
     if (btString == "Go") {
       moving = true;
-      bluetooth.print("Go Recieved");
+      bluetooth.println("Go Recieved");
     } else if (btString == "Stop") {
       moving = false;
-      bluetooth.print("Stop Recieved");
-    }
-    /*if(btString == "Recalibrate"){
-      bluetooth.println(("Recalibrating"));
-      bluetooth.println(F("Calculating offsets, do not move MPU6050"));
-      delay(100);
-      gyroscope.calcOffsets(true,true); // gyro and accelero
-      bluetooth.println("Done!\n");
-    }*/
-    else if (btString == "Moving") {
-      bluetooth.println("moving is ");
-      bluetooth.print(moving);
+      bluetooth.println("Stop Recieved");
     } else if (btString == "Right") {
       lineAngleDeg -= 90;
       bluetooth.println("R");
@@ -147,6 +134,27 @@ void stopTractor() {
   digitalWrite(motorLBackward, LOW);
   digitalWrite(motorRForward, LOW);
   digitalWrite(motorRBackward, LOW);
+}
+
+void sendLocationData(){
+  
+  if (millis() - sendDataTimer > 5000) {
+    
+    bluetooth.print("ANGLEZ=");
+    bluetooth.println(gyroscope.getAngleZ());
+
+    bluetooth.print("PosX=");
+    bluetooth.println(posX);
+    bluetooth.print("PosY=");
+    bluetooth.println(posY);
+    bluetooth.print("VelX=");
+    bluetooth.println(velX);
+    bluetooth.print("VelY=");
+    bluetooth.println(velY);
+
+    sendDataTimer = millis();
+  }
+  
 }
 
 void driveForward(bool considerHorizontal) {
@@ -207,39 +215,6 @@ void updateGyroPos() {
   gyroTimer = millis();
 }
 
-void gyroTest() {
-
-  if (millis() - gyroPrintTimer > 5000) {
-
-
-    /*Serial.print(F("Displacement     X(cm): "));
-      Serial.print(posX/(9.8*10000));
-      Serial.print("\tY(cm): ");
-      Serial.println(posY/(9.8*10000));
-      
-      Serial.print(F("Velocity     X(cm/s): "));
-      Serial.print(velX/0.98);
-      Serial.print("\tY(cm/s): ");
-      Serial.println(velY/0.98);
-      
-      Serial.print(F("Aceleration     X: "));
-      Serial.print(gyroscope.getAccX());
-      Serial.print("\tY: ");
-      Serial.println(gyroscope.getAccY());
-      */
-
-    bluetooth.print(F("ANGLE     X: "));
-    bluetooth.print(gyroscope.getAngleX());
-    bluetooth.print("\tY: ");
-    bluetooth.print(gyroscope.getAngleY());
-    bluetooth.print("\tZ: ");
-    bluetooth.println(gyroscope.getAngleZ());
-    bluetooth.println();
-
-    gyroPrintTimer = millis();
-  }
-}
-
 void driveTractor(int LSpeed, int RSpeed) {
 
   //convert wheel speed into forward and backward signal
@@ -259,14 +234,16 @@ void onButtonStateHigh() {
   bluetooth.println("Button up");
   buttonControl = !buttonControl;
   moving = buttonControl;
+  bluetooth.print("MOVING=");
+  bluetooth.print(moving);
   /*if (buttonControl)
-  {
+    {
     //bluetooth.println(("Restarting"));
     bluetooth.println(F("Calculating offsets, do not move MPU6050"));
     delay(100);
     gyroscope.calcOffsets(true,true); // gyro and accelero
     bluetooth.println("Done!\n");
-  }*/
+    }*/
 }
 
 void onButtonStateLow() {
@@ -293,18 +270,9 @@ void updateButton(bool buttonVal) {
   }
 }
 
-/*void gyroCal()
-{
-  bluetooth.println(F("Calculating offsets, do not move MPU6050"));
-  delay(100);
-  gyroscope.calcOffsets(true,true); // gyro and accelero
-  bluetooth.println("Done!\n");
-}*/
-
 void IRtest() {
   val = analogRead(IR_PIN);  //photodiode reading
-  //bluetooth.print("IR:");
-  //bluetooth.println(val);
+  
   if (val <= limit && turnDelay < 0)  // NO OBSTICLE
   {
     //bluetooth.println("Read Floor");
@@ -317,12 +285,12 @@ void IRtest() {
     //makeNextTurn();
     //turnDelay = 200 for left 300 for right
     if (counter <= 1) {
-    turnDelay = 200;
-  } else if (counter <= 3) {
-    turnDelay = 300;
-  } else if (counter <= 5) {
-    turnDelay = 200;
-  }
+      turnDelay = 200;
+    } else if (counter <= 3) {
+      turnDelay = 300;
+    } else if (counter <= 5) {
+      turnDelay = 200;
+    }
 
     lastUpdateMS = millis();
     turning = true;
@@ -332,7 +300,6 @@ void IRtest() {
 void makeNextTurn() {
   if (counter <= 1) {
     lineAngleDeg += 90;
-    bluetooth.println("L");
   } else if (counter <= 3) {
     lineAngleDeg -= 90;
     bluetooth.println("R");
@@ -340,21 +307,24 @@ void makeNextTurn() {
     lineAngleDeg += 90;
     bluetooth.println("L");
   }
+  bluetooth.print("GOALANGLE=");
+  bluetooth.println(lineAngleDeg);
   counter++;
 }
 
 void ultraEStop() {
   if (digitalRead(3) == 0)  {
-    if(moving){
+    if (moving) {
       moving = false;
       obstacle = true;
-      bluetooth.println("Obstacle Detected");
+      bluetooth.println("Obstacle Found");
     }
   }
   else if (obstacle)
   {
     moving = true;
     obstacle = false;
+      bluetooth.println("Obstacle Cleared");
   }
 }
 
@@ -364,13 +334,5 @@ void turnTimer() {
     lastUpdateMS = millis();
     if (turnDelay <= 0)
       makeNextTurn();
-  }
-}
-
-void bluetoothReadingTest()
-{
-  if (millis() % 500 == 0)
-  {
-    bluetooth.println("recieve test");
   }
 }

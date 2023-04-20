@@ -78,6 +78,10 @@ class Tractor():
             if msg == "Read Tape":
                 self.tapes.append((self.time(), self.PosX, self.PosY))
 
+                
+            if msg.startswith("MOVING="):
+                self.moving = bool(int(msg[len("MOVING="):]))
+
             if msg.startswith("GOALANGLE="):
                 self.idealAngleZ = float(msg[len("GoALANGLE="):])
                 
