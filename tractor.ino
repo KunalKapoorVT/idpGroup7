@@ -235,7 +235,7 @@ void onButtonStateHigh() {
   buttonControl = !buttonControl;
   moving = buttonControl;
   bluetooth.print("MOVING=");
-  bluetooth.print(moving);
+  bluetooth.println(moving);
   /*if (buttonControl)
     {
     //bluetooth.println(("Restarting"));

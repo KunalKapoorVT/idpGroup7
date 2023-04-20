@@ -1,4 +1,5 @@
 from bleak import BleakClient, BleakScanner
+from math import sin, cos
 import asyncio
 import time
 
@@ -18,6 +19,12 @@ class Tractor():
                 self.AngleZ = 0
                 self.VelX = 0
                 self.velY = 0
+
+                self.estimatedXVals = []
+                self.estimatedYVals = []
+
+                self.prevEstX = 0
+                self.prevEstY = 0
                 
                 self.prevPosX = 0
                 self.prevPosY = 0
@@ -25,13 +32,14 @@ class Tractor():
                 self.moving = False
                 self.obstacle = False
 
-                self.lastCheckpointX = 0
-                self.lastCheckpointY = 0
-
                 self.idealAngleZ = 0
 
                 self.tapes = []
+                self.estTapes = []
                 self.obstacles = []
+                self.estObstacles = []
+
+                self.userConrolEvents = []
                 
                 #permanent mac address of the tractor
                 self.mac_addr = "94:A9:A8:3A:4D:8B"
@@ -64,29 +72,48 @@ class Tractor():
 
             if msg == "Go Recieved":
                 self.moving = True
+                self.userConrolEvents.append((self.time(), self.moving))
+                
             if msg == "Stop Recieved":
                 self.moving = False
+                self.userConrolEvents.append((self.time(), self.moving))
+                
             if msg == "Obstacle":
                 self.moving = False
                 self.obstacle = True
                 self.obstacles.append((self.time(), self.PosX, self.PosY))
+                self.estObstacles.append((self.time(), self.prevEstX, self.prevEstY))
+                
             if msg == "Obstacle Cleared":
                 self.moving = True
                 self.obstacle = False
-                prevObs = self.obstacles
-                self.obstacles[-1] = (prevObs[0],prevObs[1],prevObs[2],self.time())
+                prevObs = self.obstacles[-1]
+                prevEstObs = self.estObstacles[-1]
+                self.obstacles[-1] = (prevObs[0],self.time(),prevObs[1],prevObs[2])
+                self.estObstacles[-1] = (prevEstObs[0],self.time(),prevEstObs[1],prevEstObs[2])
+                
             if msg == "Read Tape":
                 self.tapes.append((self.time(), self.PosX, self.PosY))
+                self.estTapes.append((self.time(), self.prevEstX, self.prevEstY))
 
                 
             if msg.startswith("MOVING="):
                 self.moving = bool(int(msg[len("MOVING="):]))
+                self.userConrolEvents.append((self.time(), self.moving))
 
             if msg.startswith("GOALANGLE="):
                 self.idealAngleZ = float(msg[len("GoALANGLE="):])
                 
             if msg.startswith("ANGLEZ="):
                 self.AngleZ = float(msg[len("ANGLEZ="):])
+
+                if(self.moving):
+
+                    self.estimatedXVals.append((self.time(), self.prevEstX-sin(self.AngleZ)))
+                    self.estimatedYVals.append((self.time(), self.prevEstY+cos(self.AngleZ)))
+                    
+                    self.prevEstX = self.estimatedXVals[-1][1]
+                    self.prevEstY = self.estimatedYVals[-1][1]  
 
             if msg.startswith("PosX="):
                 self.prevPosX = self.PosX
