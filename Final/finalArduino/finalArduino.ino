@@ -8,13 +8,13 @@ const double pi = 3.14159265358979323846264;
 const double minAngleFactor = 10000;
 
 //motor pins
-const int motorLForward = 11;
-const int motorLBackward = 10;
+const int motorLForward = 10;
+const int motorLBackward = 11;
 const int motorRForward = 5;
 const int motorRBackward = 6;
 
 //push button
-const int buttonIn = A3;
+const int buttonIn = A2;
 
 //Bluetooth
 const int BT_PIN_RXD = 7;
@@ -25,8 +25,10 @@ const int IR_PIN = A0;
 int val = 0;
 int limit = 1010;
 bool turning = false;
-int turnDelay = 0;
-int lastUpdateMS = 0;
+int delayTime = 0;
+
+//ultrasonic sensor
+int ultraSensorPin = 3;
 
 //gyro
 unsigned long gyroTimer = 0;
@@ -48,8 +50,7 @@ int lowCount = 0;
 int highCount = 0;
 
 //states
-bool buttonState = false;
-bool buttonControl = false;
+bool buttonState = true;
 bool moving = false;
 String turn = "Forward";
 int counter = 0;
@@ -65,6 +66,8 @@ void setup() {
   pinMode(motorLBackward, OUTPUT);
   pinMode(motorRForward, OUTPUT);
   pinMode(motorRBackward, OUTPUT);
+
+  pinMode(buttonIn, INPUT);
 
   //pinMode(trigPin, OUTPUT);
   //pinMode(echoPin, INPUT);
@@ -95,9 +98,6 @@ void loop() {
 
   IRtest();
 
-  if (turning)
-    turnTimer();
-
   if (bluetooth.available()) {
     String btString = bluetooth.readString();
     if (btString == "Go") {
@@ -108,17 +108,12 @@ void loop() {
       bluetooth.println("Stop Recieved");
     } else if (btString == "Right") {
       lineAngleDeg -= 90;
-      bluetooth.println("R");
-      bluetooth.println(lineAngleDeg);
     } else if (btString == "Left") {
       lineAngleDeg += 90;
-      bluetooth.println("L");
-      bluetooth.println(lineAngleDeg);
     }
   }
 
-  bool buttonVal = analogRead(buttonIn) > 512;
-  //bluetooth.println(analogRead(buttonIn));
+  bool buttonVal = analogRead(buttonIn) < 512;
   updateButton(buttonVal);
 
   //bluetooth.println(moving);
@@ -138,7 +133,7 @@ void stopTractor() {
 
 void sendLocationData(){
   
-  if (millis() - sendDataTimer > 5000) {
+  if (millis() - sendDataTimer > 500) {
     
     bluetooth.print("ANGLEZ=");
     bluetooth.println(gyroscope.getAngleZ());
@@ -151,6 +146,9 @@ void sendLocationData(){
     bluetooth.println(velX);
     bluetooth.print("VelY=");
     bluetooth.println(velY);
+
+//    bluetooth.print("IR=");
+//    bluetooth.println(analogRead(IR_PIN));
 
     sendDataTimer = millis();
   }
@@ -231,9 +229,7 @@ void driveTractor(int LSpeed, int RSpeed) {
 }
 
 void onButtonStateHigh() {
-  bluetooth.println("Button up");
-  buttonControl = !buttonControl;
-  moving = buttonControl;
+  moving = !moving;
   bluetooth.print("MOVING=");
   bluetooth.println(moving);
   /*if (buttonControl)
@@ -247,8 +243,6 @@ void onButtonStateHigh() {
 }
 
 void onButtonStateLow() {
-  bluetooth.println("Button down");
-  moving = buttonControl;
 }
 
 void updateButton(bool buttonVal) {
@@ -271,29 +265,27 @@ void updateButton(bool buttonVal) {
 }
 
 void IRtest() {
+  static int floorCount = 0;
+  static int tapeCount = 0;
   val = analogRead(IR_PIN);  //photodiode reading
   
-  if (val <= limit && turnDelay < 0)  // NO OBSTICLE
+  if (val <= limit)  // NO OBSTICLE
   {
-    //bluetooth.println("Read Floor");
-    //delay(20);
-    turning = false;
-  } else if (val > limit && !turning)  // OBSTICLE DETECTED
-  {
-    bluetooth.println("Read Tape");
-    //delay(20);
-    //makeNextTurn();
-    //turnDelay = 200 for left 300 for right
-    if (counter <= 1) {
-      turnDelay = 200;
-    } else if (counter <= 3) {
-      turnDelay = 300;
-    } else if (counter <= 5) {
-      turnDelay = 200;
+    floorCount++;
+    tapeCount = 0;
+    if(floorCount > 10 && ((millis() - delayTime) > 1500)){
+      turning = false;
     }
-
-    lastUpdateMS = millis();
-    turning = true;
+  } else if (val > limit)  // OBSTICLE DETECTED
+  {
+    tapeCount++;
+    floorCount = 0;
+    if (!turning && tapeCount > 10){
+      bluetooth.println("Read Tape");
+      delayTime = millis();
+      makeNextTurn();
+      turning = true;
+    }
   }
 }
 
@@ -302,10 +294,11 @@ void makeNextTurn() {
     lineAngleDeg += 90;
   } else if (counter <= 3) {
     lineAngleDeg -= 90;
-    bluetooth.println("R");
   } else if (counter <= 5) {
     lineAngleDeg += 90;
-    bluetooth.println("L");
+  }
+  if(counter == 2){
+      delayTime -= 1000;
   }
   bluetooth.print("GOALANGLE=");
   bluetooth.println(lineAngleDeg);
@@ -313,7 +306,7 @@ void makeNextTurn() {
 }
 
 void ultraEStop() {
-  if (digitalRead(3) == 0)  {
+  if (digitalRead(ultraSensorPin) == 0)  {
     if (moving) {
       moving = false;
       obstacle = true;
@@ -324,15 +317,6 @@ void ultraEStop() {
   {
     moving = true;
     obstacle = false;
-      bluetooth.println("Obstacle Cleared");
-  }
-}
-
-void turnTimer() {
-  if (turnDelay > 0) {
-    turnDelay -= millis() - lastUpdateMS;
-    lastUpdateMS = millis();
-    if (turnDelay <= 0)
-      makeNextTurn();
+    bluetooth.println("Obstacle Cleared");
   }
 }
